@@ -22,6 +22,7 @@ import org.eclipse.debug.internal.ui.DebugPluginImages;
 import org.eclipse.debug.internal.ui.IInternalDebugUIConstants;
 import org.eclipse.debug.internal.ui.actions.ActionMessages;
 import org.eclipse.debug.ui.actions.DebugCommandAction;
+import org.eclipse.debug.ui.contexts.DebugContextEvent;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.StructuredSelection;
@@ -49,9 +50,7 @@ public class TerminateAllAction extends DebugCommandAction implements ILaunchesL
 	private void attachSelfToLaunchManager() {
 		ILaunchManager launchManager = getLaunchManager();
 		launchManager.addLaunchListener(this);
-		// heuristic... rather than updating all the time, just assume there's
-		// something that's not terminated.
-		setEnabled(launchManager.getLaunches().length > 0);
+		setEnabled(!isAllTerminated());
 	}
 
 	private ILaunchManager getLaunchManager() {
@@ -102,8 +101,15 @@ public class TerminateAllAction extends DebugCommandAction implements ILaunchesL
 	}
 
 	@Override
+	public void debugContextChanged(DebugContextEvent event) {
+		// The debug context (aka selection in Debug View) is not relevant
+		// to the Terminate All Action's enablements. All that matters if there are
+		// unterminated launches.
+	}
+
+	@Override
 	public void launchesTerminated(ILaunch[] launches) {
-		setEnabled(getLaunchManager().getLaunches().length > 0);
+		setEnabled(!isAllTerminated());
 	}
 
 	@Override
@@ -117,7 +123,17 @@ public class TerminateAllAction extends DebugCommandAction implements ILaunchesL
 
 	@Override
 	public void launchesRemoved(ILaunch[] launches) {
-		setEnabled(getLaunchManager().getLaunches().length > 0);
+		setEnabled(!isAllTerminated());
+	}
+
+	protected boolean isAllTerminated() {
+		ILaunch[] launches = getLaunchManager().getLaunches();
+		for (ILaunch launch : launches) {
+			if (!launch.isTerminated()) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	@Override
